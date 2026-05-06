@@ -1,0 +1,41 @@
+.App {
+  min-height: 100vh;
+  background-color: #F4F4F5;
+}
+
+.upload-zone {
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.upload-zone:hover {
+  border-color: #0033CC;
+  background-color: #FAFAFA;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+table th {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #71717A;
+  padding: 0.75rem;
+  border-bottom: 1px solid #E4E4E7;
+}
+
+table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #E4E4E7;
+  font-size: 0.875rem;
+}
+
+table td.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+button {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
