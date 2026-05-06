@@ -1,7 +1,5 @@
 import json
 import sqlite3
-import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 
@@ -38,26 +36,6 @@ CREATE TABLE IF NOT EXISTS cost_centers (
 );
 """
 
-CREATE_CATEGORIES_TABLE = """
-CREATE TABLE IF NOT EXISTS categories (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    created_at TEXT NOT NULL
-);
-"""
-
-CREATE_SUBCATEGORIES_TABLE = """
-CREATE TABLE IF NOT EXISTS subcategories (
-    id TEXT PRIMARY KEY,
-    category_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    created_at TEXT NOT NULL,
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
-);
-"""
-
 CREATE_MOBILE_ASSIGNMENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS mobile_assignments (
     id TEXT PRIMARY KEY,
@@ -70,77 +48,11 @@ CREATE TABLE IF NOT EXISTS mobile_assignments (
 );
 """
 
-CREATE_EXCHANGE_RATES_TABLE = """
-CREATE TABLE IF NOT EXISTS exchange_rates (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    rate REAL NOT NULL,
-    source TEXT NOT NULL,
-    fetched_at TEXT NOT NULL,
-    rate_date TEXT NOT NULL,
-    note TEXT
-);
-"""
-
-DEFAULT_CATEGORIES = {
-    "SERVICIOS": [
-        "Luz",
-        "Agua",
-        "Internet",
-        "Mantenimiento",
-        "Telefonia",
-    ],
-    "CONSUMOS": [
-        "Materiales",
-        "Repuestos",
-        "Equipos",
-        "Compras generales",
-    ],
-}
-
-
-def ensure_default_categories():
-    existing_categories = fetch_all("SELECT id, name FROM categories")
-    existing_names = {category["name"] for category in existing_categories}
-    category_ids = {category["name"]: category["id"] for category in existing_categories}
-
-    for category_name, subcategory_names in DEFAULT_CATEGORIES.items():
-        if category_name not in existing_names:
-            category_id = str(uuid.uuid4())
-            execute(
-                "INSERT INTO categories (id, name, description, created_at) VALUES (?, ?, ?, ?)",
-                (category_id, category_name, None, datetime.now(timezone.utc).isoformat()),
-            )
-            category_ids[category_name] = category_id
-        else:
-            category_id = category_ids[category_name]
-
-        existing_subcategories = fetch_all(
-            "SELECT name FROM subcategories WHERE category_id = ?",
-            (category_id,),
-        )
-        existing_subcategory_names = {sub["name"] for sub in existing_subcategories}
-
-        for subcategory_name in subcategory_names:
-            if subcategory_name not in existing_subcategory_names:
-                execute(
-                    "INSERT INTO subcategories (id, category_id, name, description, created_at) VALUES (?, ?, ?, ?, ?)",
-                    (
-                        str(uuid.uuid4()),
-                        category_id,
-                        subcategory_name,
-                        None,
-                        datetime.now(timezone.utc).isoformat(),
-                    ),
-                )
-
 with _LOCK:
     _CONN.executescript("\n".join([
         CREATE_DOCUMENTS_TABLE,
         CREATE_COST_CENTERS_TABLE,
-        CREATE_CATEGORIES_TABLE,
-        CREATE_SUBCATEGORIES_TABLE,
         CREATE_MOBILE_ASSIGNMENTS_TABLE,
-        CREATE_EXCHANGE_RATES_TABLE,
     ]))
     _CONN.commit()
 
@@ -170,28 +82,6 @@ def execute(query: str, params: tuple = ()):
         cursor = _CONN.execute(query, params)
         _CONN.commit()
         return cursor
-
-
-def get_latest_exchange_rate(rate_date: str = None):
-    if rate_date:
-        return fetch_one(
-            "SELECT rate, source, fetched_at, rate_date, note FROM exchange_rates WHERE rate_date = ? ORDER BY fetched_at DESC LIMIT 1",
-            (rate_date,),
-        )
-
-    return fetch_one(
-        "SELECT rate, source, fetched_at, rate_date, note FROM exchange_rates ORDER BY fetched_at DESC LIMIT 1",
-        (),
-    )
-
-
-def insert_exchange_rate(rate: float, source: str, rate_date: str, note: str = None):
-    execute(
-        "INSERT INTO exchange_rates (rate, source, fetched_at, rate_date, note) VALUES (?, ?, ?, ?, ?)",
-        (rate, source, datetime.now(timezone.utc).isoformat(), rate_date, note),
-    )
-
-ensure_default_categories()
 
 
 def adapt_json(value):

@@ -2,7 +2,6 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from typing import List
 from pathlib import Path
 import shutil
-import os
 from datetime import datetime, timezone
 import logging
 

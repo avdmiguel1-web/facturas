@@ -32,18 +32,14 @@ EXPORT_DIR.mkdir(exist_ok=True)
 # Import routes from separate modules
 from routes.documents import router as documents_router
 from routes.cost_centers import router as cost_centers_router
-from routes.categories import router as categories_router
-from routes.assignments import router as mobile_assignments_router
+from routes.mobile_assignments import router as mobile_assignments_router
 from routes.export_data import router as export_router
-from routes.exchange_rate import router as exchange_rate_router
 
 # Include routers
 api_router.include_router(documents_router, prefix="/documents", tags=["documents"])
 api_router.include_router(cost_centers_router, prefix="/cost-centers", tags=["cost-centers"])
-api_router.include_router(categories_router, prefix="/categories", tags=["categories"])
 api_router.include_router(mobile_assignments_router, prefix="/mobile-assignments", tags=["mobile-assignments"])
 api_router.include_router(export_router, prefix="/export", tags=["export"])
-api_router.include_router(exchange_rate_router)
 
 @api_router.get("/")
 async def root():
@@ -85,25 +81,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("startup")
-async def startup_sync_exchange_rate():
-    """Sincroniza la tasa de cambio al iniciar la aplicación"""
-    try:
-        from services.exchange_rate import get_exchange_rate_service
-        service = get_exchange_rate_service()
-        rate = await service.fetch_rate_from_bcv()
-        if rate:
-            logger.info(f"Tasa de cambio sincronizada al inicio: {rate}")
-        else:
-            logger.warning(f"No se sincronizó la tasa del BCV. Usando tasa por defecto: {service.DEFAULT_RATE}")
-    except Exception as e:
-        logger.error(f"Error sincronizando tasa al inicio: {e}")
-
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    try:
-        client.close()
-    except NameError:
-        logger.warning("No se encontró cliente para cerrar en el evento shutdown.")
-    except Exception as exc:
-        logger.warning(f"Error al cerrar cliente en shutdown: {exc}")
+    client.close()
